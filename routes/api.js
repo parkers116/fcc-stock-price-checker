@@ -6,72 +6,104 @@
  *
  */
 
-'use strict';
+"use strict";
 
-const expect = require('chai').expect;
+const expect = require("chai").expect;
 
-const StockHandler = require('../controllers/stockHandler.js');
+const StockHandler = require("../controllers/stockHandler.js");
 
 module.exports = function (app) {
   var StockController = new StockHandler();
 
-  app.route('/api/stock-prices').get(function (req, res) {
-    let isLike = req.query.like === 'true' ? true : false;
-    StockController.getLikes(req.query.stock, isLike, req.connection.remoteAddress);
-    // let prices = null;
-    // let likes = null;
-    // let returnArray = [];
-    // let returnObject0 = {};
-    // let returnObject1 = {};
+  app.route("/api/stock-prices").get(async (req, res) => {
+    let prices = null;
+    let likes = null;
+    let returnJSON = {}; // for 1 stock
+    let returnArray = []; // for 2 stocks
+    let returnObject0 = {}; // for 2 stocks
+    let returnObject1 = {}; // for 2 stocks
 
-    // if (Array.isArray(res.query.stock)) {
-    //   prices = [];
-    //   likes = [];
-    //   returnObject0 = {};
-    //   returnObject1 = {};
+    if (Array.isArray(req.query.stock)) {
+      prices = {};
+      likes = {};
+      returnObject0 = {};
+      returnObject1 = {};
 
-    //   req.query.stock.map((item) => {
-    //     prices.push(stockStockController.getData(item.toUpperCase()));
-    //     likes.push(stockStockController.getLikes(item.toUpperCase()));
-    //   });
+      // stock name uppercase
+      req.query.stock = req.query.stock.map((item) => item.toUpperCase());
 
-    //   if (prices[0] === "invalid") {
-    //     returnObject0 = { error: "external source error", rel_likes: 0 };
-    //   } else {
-    //     returnObject0 = {
-    //       stock: res.query.stock[0].toUpperCase(),
-    //       price: prices[0],
-    //       rel_likes: prices[0] - prices[1],
-    //     };
-    //   }
-    //   if (prices[1] === "invalid") {
-    //     returnObject1 = { error: "external source error", rel_likes: 0 };
-    //   } else {
-    //     returnObject1 = {
-    //       stock: res.query.stock[1].toUpperCase(),
-    //       price: prices[1],
-    //       rel_likes: prices[1] - prices[0],
-    //     };
-    //   }
-    //   returnArray.push(returnObject0);
-    //   returnArray.push(returnObject1);
+      req.query.stock.map((item) => {
+        prices[item] = StockController.getData(item);
+        likes[item] = StockController.getLikes(
+          item,
+          req.query.like,
+          req.connection.remoteAddress
+        );
+      });
 
-    //   //check whether the data is valid or not
-    //   if (prices[0] === "invalid") {
-    //   }
+      await Promise.all([
+        prices[req.query.stock[0]],
+        likes[req.query.stock[0]],
+        prices[req.query.stock[1]],
+        likes[req.query.stock[1]],
+      ]).then((arr) => {
+        prices[req.query.stock[0]] = arr[0];
+        likes[req.query.stock[0]] = arr[1];
+        prices[req.query.stock[1]] = arr[2];
+        likes[req.query.stock[1]] = arr[3];
+      });
 
-    //   res.json({ stockData: returnArray });
-    // } else {
-    //   prices = StockController.getData(res.query.stock.toUpperCase());
-    //   likes = StockController.getLikes(res.query.stock.toUpperCase());
+      if (prices[req.query.stock[0]] === "invalid") {
+        returnObject0 = { error: "external source error", rel_likes: 0 };
+      } else {
+        returnObject0 = {
+          stock: req.query.stock[0],
+          price: prices[req.query.stock[0]],
+          rel_likes: likes[req.query.stock[0]] - likes[req.query.stock[1]],
+        };
+      }
+      if (prices[req.query.stock[1]] === "invalid") {
+        returnObject1 = { error: "external source error", rel_likes: 0 };
+      } else {
+        returnObject1 = {
+          stock: req.query.stock[1],
+          price: prices[req.query.stock[1]],
+          rel_likes: likes[req.query.stock[1]] - likes[req.query.stock[0]],
+        };
+      }
+      returnArray.push(returnObject0);
+      returnArray.push(returnObject1);
 
-    //   res.json({
-    //     stockData: {
-    //       stock: res.query.stock.toUpperCase(),
-    //       price: prices,
-    //       likes: likes,
-    //     },
-    //   });
-    // }
+      res.json({ stockData: returnArray });
+    } else {
+      // stock name uppercase
+      req.query.stock = req.query.stock.toUpperCase();
+
+      prices = await StockController.getData(req.query.stock);
+      likes = await StockController.getLikes(
+        req.query.stock,
+        req.query.like,
+        req.connection.remoteAddress
+      );
+
+      if (prices === "invalid") {
+        returnJSON = {
+          stockData: {
+            error: "external source error",
+            likes: likes,
+          },
+        };
+      } else {
+        returnJSON = {
+          stockData: {
+            stock: req.query.stock,
+            price: prices,
+            likes: likes,
+          },
+        };
+      }
+
+      res.json(returnJSON);
+    }
   });
 };

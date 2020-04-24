@@ -4,7 +4,8 @@
   "description": "What am I about?",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "mocha -u tdd ./tests/1_unit-tests.js ./tests/2_functional-tests.js"
   },
   "dependencies": {
     "axios": "^0.19.2",
