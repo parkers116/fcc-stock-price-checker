@@ -8,7 +8,7 @@
     "test": "mocha -u tdd ./tests/1_unit-tests.js ./tests/2_functional-tests.js"
   },
   "dependencies": {
-    "axios": "^0.19.2",
+    "axios": "^0.21.1",
     "chai": "^4.2.0",
     "chai-http": "^4.3.0",
     "cors": "^2.8.5",
